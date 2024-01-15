@@ -31,8 +31,18 @@
       "react-app/jest"
     ],
     "rules": {
-      "indent": ["error", 4],
-      "semi": ["error", "never"]
+      "indent": [
+        "error",
+        4
+      ],
+      "semi": [
+        "error",
+        "never"
+      ],
+      "quotes": [
+        "error",
+        "double"
+      ]
     }
   },
   "browserslist": {
@@ -46,5 +56,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
   }
 }
