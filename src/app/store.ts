@@ -1,7 +1,8 @@
 import { configureStore, ThunkAction, Action } from "@reduxjs/toolkit"
+import vibratingStringReducer from "../features/vibratingString/vibratingStringSlice"
 
 export const store = configureStore({
-    reducer: {},
+    reducer: { vibratingString: vibratingStringReducer },
 })
 
 export type AppDispatch = typeof store.dispatch;
