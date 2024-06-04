@@ -14,43 +14,42 @@ class KarplusStrongProcessor extends AudioWorkletProcessor {
         // Initialize the delay buffer
         this.bufferSize = sampleRate * 0.5
         this.buffer = new Float32Array(this.bufferSize)
-        this.writeIndex = 7000 // this is related to the delay time (and pitch)
+        this.writeIndex = 10000 // this is related to the delay time (and pitch)
         this.readIndex = 0
+
+        // Feedback parameters
+        this.feedback = 0.99
+        this.damping = 0.5 // low-pass filter damping factor
+        this.lastSample = 0
     }
 
     process(inputs, outputs, parameters) {
         // karplus-strong is a noise burst into a feedback delay lpf
         const output = outputs[0]
-        const noiseDur = 0.2 // seconds
-        const fullDur = 10 * noiseDur
+        const fullDur = 2
+        const noiseDur = 0.1 // seconds
         const sampleDur = 1 / sampleRate
 
-        // TODO implement the feedback delay lpf
         output.forEach(channel => {
             for (let i = 0; i < channel.length; i++) {
-                let currNoiseSample = 0
-                if (this.isBurstActive) {
-                    const maxAmp = 0.25
-                    const ampEnv = 1 - (this.elapsedTime / noiseDur)
-                    currNoiseSample =  maxAmp * ampEnv * (Math.random() * 2 - 1)
+                this.isBurstActive = this.elapsedTime < noiseDur
+                this.isActive = this.elapsedTime < fullDur
 
-                    if (this.elapsedTime >= noiseDur) this.isBurstActive = false                    
-                }
-                                
-                let currDelaySample = this.buffer[this.readIndex]
+                // generate noise
+                const newNoise = 0.25 * (1 - (this.elapsedTime / noiseDur)) * (Math.random() * 2 - 1)
+                const currNoiseSample = this.isBurstActive ? newNoise : 0
+                
+                // delay w feedback + lpf
+                const currDelaySample = this.buffer[this.readIndex]
+                const currFeedbackLpfSample = this.damping * (this.lastSample + currDelaySample) / 2
+                this.lastSample = currFeedbackLpfSample
+                this.buffer[this.writeIndex] = currNoiseSample + currFeedbackLpfSample // TODO is amplitude less than 1?
+
+                // increment
                 this.readIndex = (this.readIndex + 1) % this.bufferSize
-
-                if (this.isActive) {    
-                    this.buffer[this.writeIndex] = currNoiseSample + currDelaySample
-                    this.writeIndex = (this.writeIndex + 1) % this.bufferSize
-
-                    if (this.elapsedTime >= fullDur) this.isActive = false                    
-                } else {
-                    currDelaySample = 0
-                }
-
-                channel[i] = this.buffer[this.readIndex]
+                this.writeIndex = (this.writeIndex + 1) % this.bufferSize
                 this.elapsedTime += sampleDur
+                channel[i] = this.buffer[this.readIndex]
             }
         })
 
