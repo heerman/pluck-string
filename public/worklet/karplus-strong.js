@@ -11,23 +11,23 @@ class KarplusStrongProcessor extends AudioWorkletProcessor {
         this.isBurstActive = true
         this.isActive = true
 
-        // Initialize the delay buffer
-        this.bufferSize = sampleRate * 0.5
+        // initialize the delay buffer
+        this.bufferSize = Math.floor(sampleRate / 220) // roughly corresponds to the pitch of A3 (220 Hz)
         this.buffer = new Float32Array(this.bufferSize)
-        this.writeIndex = 10000 // this is related to the delay time (and pitch)
-        this.readIndex = 0
+        this.writeIndex = 0
+        this.readIndex = Math.floor(this.bufferSize / 2) // pitch is a combo of this and bufferSize
 
-        // Feedback parameters
-        this.feedback = 0.99
-        this.damping = 0.5 // low-pass filter damping factor
+        // feedback parameters
+        this.feedback = 0.98
+        this.damping = 0.99
         this.lastSample = 0
     }
 
     process(inputs, outputs, parameters) {
-        // karplus-strong is a noise burst into a feedback delay lpf
+        // Karplus-Strong is a noise burst into a feedback delay LPF
         const output = outputs[0]
-        const fullDur = 2
-        const noiseDur = 0.1 // seconds
+        const fullDur = 2 // TODO use parameter
+        const noiseDur = 0.1
         const sampleDur = 1 / sampleRate
 
         output.forEach(channel => {
@@ -36,20 +36,19 @@ class KarplusStrongProcessor extends AudioWorkletProcessor {
                 this.isActive = this.elapsedTime < fullDur
 
                 // generate noise
-                const newNoise = 0.25 * (1 - (this.elapsedTime / noiseDur)) * (Math.random() * 2 - 1)
-                const currNoiseSample = this.isBurstActive ? newNoise : 0
+                const newNoise = this.isBurstActive ? 0.9 * (Math.random() * 2 - 1) : 0 // TODO max amp 0.9 ok?
                 
                 // delay w feedback + lpf
                 const currDelaySample = this.buffer[this.readIndex]
                 const currFeedbackLpfSample = this.damping * (this.lastSample + currDelaySample) / 2
                 this.lastSample = currFeedbackLpfSample
-                this.buffer[this.writeIndex] = currNoiseSample + currFeedbackLpfSample // TODO is amplitude less than 1?
+                this.buffer[this.writeIndex] = newNoise + this.feedback * currFeedbackLpfSample
 
                 // increment
                 this.readIndex = (this.readIndex + 1) % this.bufferSize
                 this.writeIndex = (this.writeIndex + 1) % this.bufferSize
                 this.elapsedTime += sampleDur
-                channel[i] = this.buffer[this.readIndex]
+                channel[i] = currFeedbackLpfSample // TODO use buffer[writeIndex] here?
             }
         })
 
