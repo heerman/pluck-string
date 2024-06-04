@@ -12,14 +12,14 @@ class KarplusStrongProcessor extends AudioWorkletProcessor {
         this.isActive = true
 
         // initialize the delay buffer
-        this.bufferSize = Math.floor(sampleRate / 220) // roughly corresponds to the pitch of A3 (220 Hz)
+        this.bufferSize = Math.floor(sampleRate / 55) // sampleRate / freq
         this.buffer = new Float32Array(this.bufferSize)
         this.writeIndex = 0
-        this.readIndex = Math.floor(this.bufferSize / 2) // pitch is a combo of this and bufferSize
+        this.readIndex = Math.floor(this.bufferSize / 4) // pitch is a combo of this and bufferSize
 
         // feedback parameters
-        this.feedback = 0.98
-        this.damping = 0.99
+        this.feedback = 0.99999 // best bewteen 0.99 and 0.99999
+        this.damping = 0.995 // best between 0.990 and 0.999
         this.lastSample = 0
     }
 
@@ -27,7 +27,7 @@ class KarplusStrongProcessor extends AudioWorkletProcessor {
         // Karplus-Strong is a noise burst into a feedback delay LPF
         const output = outputs[0]
         const fullDur = 2 // TODO use parameter
-        const noiseDur = 0.1
+        const noiseDur = 0.02 // best bewteen 0.01 and 0.10
         const sampleDur = 1 / sampleRate
 
         output.forEach(channel => {
